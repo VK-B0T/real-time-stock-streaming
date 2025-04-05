@@ -1,0 +1,5 @@
+streamlit
+plotly
+clickhouse-connect
+yfinance
+pandas
