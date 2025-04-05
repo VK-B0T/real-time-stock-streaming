@@ -1,0 +1,60 @@
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:22181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:22181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+  
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "9000:9000"  # TCP port for ClickHouse client
+      - "8123:8123"  # HTTP interface for ClickHouse
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=stock_data
+    restart: always
+
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    ports:
+    - "8088:8088"
+    depends_on:
+    - clickhouse
+    environment:
+      SUPERSET_LOAD_EXAMPLES: "no"
+      SUPERSET_SECRET_KEY: "thisISaSecretKey"
+    volumes:
+    - superset_home:/app/superset_home
+    command: >
+      sh -c "pip install --upgrade pip &&
+             pip uninstall -y sqlalchemy-clickhouse &&
+             pip install 'sqlalchemy<2' clickhouse-connect clickhouse-sqlalchemy &&
+             superset db upgrade &&
+             superset init &&
+             gunicorn --bind 0.0.0.0:8088 'superset.app:create_app()'"
+
+
+volumes:
+  clickhouse-data:
+  superset_home:
