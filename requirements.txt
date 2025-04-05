@@ -3,3 +3,4 @@ plotly
 clickhouse-connect
 yfinance
 pandas
+streamlit-autorefresh
